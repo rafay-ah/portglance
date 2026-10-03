@@ -164,9 +164,12 @@ class PortRow(Gtk.ListBoxRow):
         self.details.set_label(describe_entry(entry, now, with_project=self.show_project))
         self.set_tooltip_text(_tooltip(entry))
 
-        self.open_button.set_visible(entry.http)
+        # Hidden buttons keep their space so the action column stays aligned.
+        self.open_button.set_opacity(1 if entry.http else 0)
+        self.open_button.set_can_target(entry.http)
+        self.open_button.set_can_focus(entry.http)
         _bind(self.open_button, "app.open-url", GLib.Variant("s", entry.url))
-        self.open_button.set_tooltip_text(f"Open {entry.url}")
+        self.open_button.set_tooltip_text(f"Open {entry.url}" if entry.http else None)
         self.stop_button.set_visible(entry.killable)
         _bind(self.stop_button, "app.stop", GLib.Variant("s", entry.key))
         self.stop_button.set_tooltip_text(

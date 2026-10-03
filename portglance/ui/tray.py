@@ -165,6 +165,10 @@ def escape_label(label: str, gnome: bool) -> str:
     return label.replace("_", "__")
 
 
+def _structure(props: dict[str, GLib.Variant]) -> tuple:
+    return (props.get("type"), props.get("children-display"))
+
+
 def _desktop_is_gnome() -> bool:
     desktops = os.environ.get("XDG_CURRENT_DESKTOP", "").lower().split(":")
     return "gnome" in desktops or "ubuntu" in desktops
@@ -190,10 +194,41 @@ class DBusMenu:
             self._registration = 0
 
     def set_items(self, items: list[MenuItem]) -> None:
+        """Replace the menu, telling the host what changed.
+
+        Hosts re-read only the structure on ``LayoutUpdated``; changed labels
+        and states of items they already know must be announced with
+        ``ItemsPropertiesUpdated``.
+        """
+        old_props = {item_id: self._properties(item_id) for item_id in self._items}
+        old_children = self._children
         self._items = {}
-        self._children = {0: self._assign(items)}
-        self.revision += 1
-        self._emit("LayoutUpdated", GLib.Variant("(ui)", (self.revision, 0)))
+        self._children = {}
+        self._children[0] = self._assign(items)
+
+        if self._children != old_children or any(
+            _structure(old_props[i]) != _structure(self._properties(i))
+            for i in self._items
+            if i in old_props
+        ):
+            self.revision += 1
+            self._emit("LayoutUpdated", GLib.Variant("(ui)", (self.revision, 0)))
+
+        updated, removed = [], []
+        for item_id in self._items:
+            before = old_props.get(item_id)
+            if before is None:
+                continue
+            after = self._properties(item_id)
+            if after != before:
+                updated.append((item_id, after))
+            gone = [name for name in before if name not in after]
+            if gone:
+                removed.append((item_id, gone))
+        if updated or removed:
+            self._emit(
+                "ItemsPropertiesUpdated", GLib.Variant("(a(ia{sv})a(ias))", (updated, removed))
+            )
 
     def _assign(self, items: list[MenuItem]) -> list[int]:
         ids = []

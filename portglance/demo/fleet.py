@@ -103,10 +103,9 @@ class DemoFleet:
         bin_dir.mkdir(parents=True, exist_ok=True)
         node = bin_dir / "node"
         node.symlink_to(sys.executable)
-        docker_proxy = bin_dir / "docker-proxy"
-        docker_proxy.symlink_to(sys.executable)
         server_code = FAKE_SERVER.read_text()
         shebang = f"#!{sys.executable}\n"
+        docker_proxy = _write(bin_dir / "docker-proxy", shebang + server_code, True)
 
         # acme-web: a Vite app with Storybook, plus a Compose stack with PostgreSQL.
         web = code / "acme-web"

@@ -109,6 +109,8 @@ def terminate(
 ) -> KillResult:
     """Send SIGTERM to ``pid``; send SIGKILL if it is still alive after ``timeout``.
 
+    With a ``timeout`` of zero or less, SIGKILL is sent straight away.
+
     ``start_ticks`` is the process start time as shown to the user. When it
     no longer matches, the process has exited and its PID may have been
     reused, so nothing is signalled. ``companions`` are other ``(pid,
@@ -117,6 +119,7 @@ def terminate(
     Companions that no longer match their start time are left alone.
     """
     started = time.monotonic()
+    force = timeout <= 0
 
     def result(outcome: str, message: str = "") -> KillResult:
         return KillResult(pid, outcome, time.monotonic() - started, message)
@@ -128,33 +131,37 @@ def terminate(
         # that gets signalled, even if it exits and its PID is reused later.
         if not main.same_process():
             return result(GONE, "The process had already exited.")
-        targets = [main, *(t for t in others if t.same_process())]
+        workers = [t for t in others if t.same_process()]
         try:
-            main.signal(signal.SIGTERM)
+            main.signal(signal.SIGKILL if force else signal.SIGTERM)
         except ProcessLookupError:
             return result(GONE, "The process had already exited.")
         except PermissionError:
             return result(DENIED, "Permission denied: the process belongs to another user.")
 
-        deadline = started + timeout
-        for target in targets:
-            target.wait(max(0.0, deadline - time.monotonic()))
-        survivors = [t for t in targets if t.alive()]
-        if not survivors:
-            return result(TERMINATED)
-
-        if on_escalate is not None:
-            on_escalate()
-        for target in survivors:
+        targets = [main, *workers]
+        if force:
+            unsignalled = workers  # the main process already got SIGKILL
+        else:
+            deadline = started + timeout
+            for target in targets:
+                target.wait(max(0.0, deadline - time.monotonic()))
+            targets = [t for t in targets if t.alive()]
+            if not targets:
+                return result(TERMINATED)
+            if on_escalate is not None:
+                on_escalate()
+            unsignalled = targets
+        for target in unsignalled:
             try:
                 target.signal(signal.SIGKILL)
             except ProcessLookupError:
                 pass
             except PermissionError:
                 return result(DENIED, "Permission denied while force-killing the process.")
-        for target in survivors:
+        for target in targets:
             target.wait(KILL_GRACE)
-        if any(t.alive() for t in survivors):
+        if any(t.alive() for t in targets):
             return result(FAILED, "The process is still running after SIGKILL.")
         return result(KILLED)
     finally:

@@ -107,6 +107,32 @@ def test_companion_with_a_reused_pid_is_left_alone() -> None:
     assert result.outcome == killer.TERMINATED
 
 
+def test_zero_timeout_sends_sigkill_straight_away() -> None:
+    noting = (
+        "import signal, sys, time\n"
+        "signal.signal(signal.SIGTERM, lambda *_: print('SIGTERM', flush=True))\n"
+        "print('ready', flush=True)\n"
+        "while True: time.sleep(0.01)\n"
+    )
+    proc = spawn(noting)
+    escalated = []
+    try:
+        result = killer.terminate(
+            proc.pid,
+            timeout=0,
+            start_ticks=start_ticks(proc.pid),
+            on_escalate=lambda: escalated.append(True),
+        )
+    finally:
+        proc.kill()
+        output, _ = proc.communicate()
+
+    assert result.outcome == killer.KILLED
+    assert proc.returncode == -9
+    assert "SIGTERM" not in output
+    assert escalated == []
+
+
 def test_mismatched_start_time_means_the_process_is_gone() -> None:
     """A recycled PID must never be signalled."""
     proc = spawn(GRACEFUL)

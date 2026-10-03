@@ -103,6 +103,8 @@ class PortEntry:
     uid: int | None = None
     pid: int | None = None
     pids: list[int] = field(default_factory=list)
+    #: ``start_ticks`` of every process in ``pids``, to recognise them when stopping.
+    start_ticks: dict[int, int] = field(default_factory=dict)
     process: ProcessInfo | None = None
     container: ContainerInfo | None = None
     container_port: int | None = None
@@ -123,6 +125,11 @@ class PortEntry:
         else:
             owner = f"u{self.uid}"
         return f"{self.proto}:{self.port}:{owner}"
+
+    @property
+    def workers(self) -> list[tuple[int, int | None]]:
+        """The other processes sharing the socket, as ``(pid, start_ticks)``."""
+        return [(pid, self.start_ticks.get(pid)) for pid in self.pids if pid != self.pid]
 
     @property
     def name(self) -> str:

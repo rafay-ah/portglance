@@ -340,12 +340,11 @@ def _stop_process(entry: PortEntry, options: argparse.Namespace) -> int:
     timeout = 0.0 if options.force else options.timeout
     signal_name = "SIGKILL" if options.force else "SIGTERM"
     print(f"Sending {signal_name} to {entry.name} (PID {entry.pid})…", flush=True)
-    companions = [(pid, None) for pid in entry.pids if pid != entry.pid]
     result = killer.terminate(
         entry.pid,
         timeout=timeout,
         start_ticks=process.start_ticks if process else None,
-        companions=companions,
+        companions=entry.workers,
         on_escalate=(
             None
             if options.force

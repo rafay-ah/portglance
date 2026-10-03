@@ -87,6 +87,26 @@ def test_companion_workers_are_killed_too() -> None:
     assert worker.returncode == -9
 
 
+def test_companion_with_a_reused_pid_is_left_alone() -> None:
+    """A worker that exited and whose PID now belongs to another process."""
+    main = spawn(GRACEFUL)
+    bystander = spawn(STUBBORN)
+    try:
+        result = killer.terminate(
+            main.pid,
+            timeout=0.4,
+            start_ticks=start_ticks(main.pid),
+            companions=[(bystander.pid, start_ticks(bystander.pid) + 1)],
+        )
+        assert bystander.poll() is None  # untouched
+    finally:
+        for proc in (main, bystander):
+            proc.kill()
+            proc.wait()
+
+    assert result.outcome == killer.TERMINATED
+
+
 def test_mismatched_start_time_means_the_process_is_gone() -> None:
     """A recycled PID must never be signalled."""
     proc = spawn(GRACEFUL)

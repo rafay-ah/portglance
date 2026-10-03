@@ -473,7 +473,7 @@ class PortGlanceApplication(Adw.Application):
                     entry.pid,
                     timeout=timeout,
                     start_ticks=entry.process.start_ticks if entry.process else None,
-                    companions=[(pid, None) for pid in entry.pids if pid != entry.pid],
+                    companions=entry.workers,
                     on_escalate=escalate,
                 )
                 outcome, message = result.outcome, result.message

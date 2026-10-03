@@ -91,12 +91,21 @@ def test_prefork_workers_collapse_into_master(
     inode = fake_proc.add_socket(8080)
     fake_proc.add_process(5000, comm="gunicorn", cwd=str(repo), ppid=1, inodes=[inode])
     for worker in (5001, 5002, 5003):
-        fake_proc.add_process(worker, comm="gunicorn", cwd=str(repo), ppid=5000, inodes=[inode])
+        fake_proc.add_process(
+            worker,
+            comm="gunicorn",
+            cwd=str(repo),
+            ppid=5000,
+            start_ticks=worker * 10,
+            inodes=[inode],
+        )
 
     entry = by_port(scanner.scan(), 8080)
 
     assert entry.pid == 5000
     assert entry.pids == [5000, 5001, 5002, 5003]
+    # Stopping checks each worker's identity before signalling it.
+    assert entry.workers == [(5001, 50010), (5002, 50020), (5003, 50030)]
     assert entry.framework == "Gunicorn"
 
 

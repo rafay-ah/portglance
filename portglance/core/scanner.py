@@ -160,6 +160,7 @@ class Scanner:
             uid=group.uid,
             pid=group.pid,
             pids=sorted(group.pids),
+            start_ticks={pid: processes[pid].info.start_ticks for pid in group.pids},
         )
         if group.pid is not None:
             process = processes[group.pid]

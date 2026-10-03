@@ -114,6 +114,7 @@ def terminate(
     reused, so nothing is signalled. ``companions`` are other ``(pid,
     start_ticks)`` processes holding the same socket (pre-fork workers); they
     are given the same deadline and force-killed along with the main process.
+    Companions that no longer match their start time are left alone.
     """
     started = time.monotonic()
 
@@ -122,10 +123,12 @@ def terminate(
 
     main = _Target(pid, start_ticks, proc_root)
     others = [_Target(p, t, proc_root) for p, t in companions if p != pid]
-    targets = [main, *others]
     try:
+        # The pidfds are open, so a process that passes this check is the one
+        # that gets signalled, even if it exits and its PID is reused later.
         if not main.same_process():
             return result(GONE, "The process had already exited.")
+        targets = [main, *(t for t in others if t.same_process())]
         try:
             main.signal(signal.SIGTERM)
         except ProcessLookupError:
@@ -155,5 +158,5 @@ def terminate(
             return result(FAILED, "The process is still running after SIGKILL.")
         return result(KILLED)
     finally:
-        for target in targets:
+        for target in (main, *others):
             target.close()

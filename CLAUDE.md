@@ -57,4 +57,6 @@ a CLI (`portglance list|kill|doctor`).
   settings, no autostart changes).
 - Packaging: `packaging/deb/build-deb.sh`, `packaging/appimage/build-appimage.sh`.
   Pushing a `vX.Y.Z` tag (it must match `__version__`) makes the Release
-  workflow build both and publish the GitHub release.
+  workflow build both and publish the GitHub release. Cloud sessions cannot
+  push tags: run the Release workflow (`workflow_dispatch`) on `main` with the
+  `tag` input instead, which creates the tag and the release.

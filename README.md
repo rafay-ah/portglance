@@ -239,8 +239,9 @@ tests/               # pytest, including a fake /proc for project mapping
 
 Packages are built by `packaging/deb/build-deb.sh` and
 `packaging/appimage/build-appimage.sh` into `dist/`. Pushing a tag `vX.Y.Z` (matching
-`__version__` in `portglance/__init__.py`) builds both, tests them, and publishes a GitHub
-release with them and their checksums.
+`__version__` in `portglance/__init__.py`), or running the *Release* workflow with that tag
+from the Actions tab, builds both, tests them, and publishes a GitHub release with them and
+their checksums.
 
 ## License
 

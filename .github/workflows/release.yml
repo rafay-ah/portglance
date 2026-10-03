@@ -1,21 +1,29 @@
 name: Release
 
-# Builds the .deb and the AppImage. Pushing a vX.Y.Z tag publishes a GitHub
-# release with them, and a release published from the web UI gets them
-# attached; a manual run keeps them as workflow artifacts only.
+# Builds the .deb and the AppImage and publishes them as a GitHub release:
+# - push a vX.Y.Z tag, or
+# - run the workflow from the Actions tab with a tag (created on the selected
+#   branch when it does not exist yet), or
+# - publish a release in the web UI, which gets the files attached.
+# Running it without a tag only keeps the packages as workflow artifacts.
 on:
   push:
     tags: ["v*"]
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish, e.g. v0.1.0 (leave empty to only build)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
 
 # A release made in the web UI can also push its tag: run one at a time.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -24,6 +32,24 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # with tags, to build an existing tag's commit
+
+      - name: Select the release
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            tag="$INPUT_TAG"
+          else
+            tag="$GITHUB_REF_NAME"
+          fi
+          if [ -n "$tag" ] && git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            git checkout -q "refs/tags/$tag"
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          echo "Building ${tag:-packages only} from $(git rev-parse --short HEAD)"
 
       - name: Install build dependencies
         run: |
@@ -35,9 +61,7 @@ jobs:
             xvfb xauth dbus-x11 curl file
 
       - name: Check the tag matches the version
-        if: github.event_name != 'workflow_dispatch'
-        env:
-          TAG: ${{ github.ref_name }}
+        if: env.TAG != ''
         run: |
           version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' portglance/__init__.py)"
           if [ "${TAG#v}" != "$version" ]; then
@@ -93,20 +117,20 @@ jobs:
           if-no-files-found: error
 
       - name: Publish the release
-        if: github.event_name != 'workflow_dispatch'
+        if: env.TAG != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" dist/* --clobber
           else
-            # The notes are the version's CHANGELOG.md entry.
+            # The notes are the version's CHANGELOG.md entry. --target only
+            # matters when the tag does not exist yet: it is created there.
             awk -v heading="## [${TAG#v}]" '
               index($0, heading) == 1 { found = 1; next }
               found && (/^## \[/ || /^\[[^]]+\]: /) { exit }
               found { print }
             ' CHANGELOG.md > release-notes.md
-            gh release create "$TAG" dist/* --verify-tag \
+            gh release create "$TAG" dist/* --target "$RELEASE_SHA" \
               --title "PortGlance ${TAG#v}" --notes-file release-notes.md
           fi

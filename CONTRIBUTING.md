@@ -51,5 +51,8 @@ The GTK smoke test runs when a display is available; CI runs it under Xvfb.
 
    The *Release* workflow checks that the versions match, runs the tests, builds the
    `.deb` and the AppImage, and publishes the GitHub release with them, their checksums
-   and the changelog entry as release notes. A release published from the web UI gets
-   the files attached as well.
+   and the changelog entry as release notes.
+
+   Without a local clone, open *Actions → Release → Run workflow* and enter the tag
+   instead; it is created on the selected branch. A release published from the web UI
+   gets the files attached as well.

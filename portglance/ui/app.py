@@ -289,39 +289,45 @@ class PortGlanceApplication(Adw.Application):
         if toast and self._parent() is not None:
             self.window.toast(title if not body else f"{title}. {body}")
             return
-        if not self._freedesktop_notify(title, body):
+        app_id = self.get_application_id() or APP_ID
+        if Gio.DesktopAppInfo.new(f"{app_id}.desktop") is not None:
             notification = Gio.Notification.new(title)
             if body:
                 notification.set_body(body)
             notification.set_icon(Gio.ThemedIcon.new(APP_ID))
+            notification.set_default_action("app.show-window")
             self.send_notification(None, notification)
+        else:
+            self._freedesktop_notify(app_id, title, body)
 
-    def _freedesktop_notify(self, title: str, body: str) -> bool:
-        """Use org.freedesktop.Notifications directly.
+    def _freedesktop_notify(self, app_id: str, title: str, body: str) -> None:
+        """Notify through org.freedesktop.Notifications.
 
-        Unlike GApplication notifications, this also works when no desktop
-        file is installed for the app id, as with the AppImage.
+        GNOME drops GApplication notifications from apps without an installed
+        desktop file, which is how the AppImage and demo mode run.
         """
-        icon = ICONS_DIR / "hicolor" / "scalable" / "apps" / f"{APP_ID}.svg"
-        hints = {"desktop-entry": GLib.Variant("s", APP_ID)}
+        icon = (ICONS_DIR / "hicolor" / "scalable" / "apps" / f"{APP_ID}.svg").as_uri()
+        hints = {"desktop-entry": GLib.Variant("s", app_id)}
+        params = GLib.Variant(
+            "(susssasa{sv}i)",
+            (APP_NAME, 0, icon, title, GLib.markup_escape_text(body), [], hints, -1),
+        )
         try:
             bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-            bus.call_sync(
-                "org.freedesktop.Notifications",
-                "/org/freedesktop/Notifications",
-                "org.freedesktop.Notifications",
-                "Notify",
-                GLib.Variant(
-                    "(susssasa{sv}i)", (APP_NAME, 0, str(icon), title, body, [], hints, -1)
-                ),
-                GLib.VariantType.new("(u)"),
-                Gio.DBusCallFlags.NONE,
-                1000,
-                None,
-            )
         except GLib.Error:
-            return False
-        return True
+            return
+        bus.call(
+            "org.freedesktop.Notifications",
+            "/org/freedesktop/Notifications",
+            "org.freedesktop.Notifications",
+            "Notify",
+            params,
+            None,
+            Gio.DBusCallFlags.NONE,
+            -1,
+            None,
+            None,
+        )
 
     def open_url(self, url: str, token: str | None = None) -> None:
         self._launch_uri(url, token, "Could not open the browser")

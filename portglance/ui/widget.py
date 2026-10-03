@@ -10,6 +10,7 @@ from ..core.model import PortEntry
 from ..core.scanner import Snapshot
 from . import pinning
 from .indicator import sort_key
+from .rows import address_for
 
 WIDGET_TITLE = f"{APP_NAME} Widget"
 MAX_ROWS = 12
@@ -57,7 +58,7 @@ class WidgetRow(Gtk.ListBoxRow):
         )
         box.append(stop)
         self.set_child(box)
-        self.set_tooltip_text(entry.url if entry.http else f"localhost:{entry.port}")
+        self.set_tooltip_text(entry.url if entry.http else address_for(entry))
 
 
 class DesktopWidget(Gtk.Window):
@@ -156,7 +157,7 @@ class DesktopWidget(Gtk.Window):
         if entry.http:
             self.app.open_url(entry.url)
         else:
-            self.app.copy_text(f"localhost:{entry.port}")
+            self.app.copy_text(address_for(entry))
 
     def _on_pin_toggled(self, button: Gtk.ToggleButton) -> None:
         self.app.settings.set("widget_pinned", button.get_active())

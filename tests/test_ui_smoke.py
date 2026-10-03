@@ -15,7 +15,7 @@ gi = pytest.importorskip("gi")
 try:
     gi.require_version("Gtk", "4.0")
     gi.require_version("Adw", "1")
-    from gi.repository import Adw, GLib
+    from gi.repository import Adw, Gdk, GLib
 except (ImportError, ValueError):
     pytest.skip("GTK 4 / libadwaita are not available", allow_module_level=True)
 
@@ -49,7 +49,19 @@ def test_demo_mode_window_lists_every_server(tmp_path: Path, monkeypatch) -> Non
             ]
             seen["rows"] = len(window.dev_view._rows)
             seen["badge"] = window.dev_page.get_badge_number()
-            app.quit()
+
+            # Clicking a row that does not speak HTTP copies its address.
+            database = next(e for e in snapshot.dev_entries if e.container and not e.http)
+            seen["expected_copy"] = f"localhost:{database.port}"
+            row = window.dev_view.row_for(database.key)
+            row.get_parent().emit("row-activated", row)
+            clipboard = Gdk.Display.get_default().get_clipboard()
+
+            def copied(source, result) -> None:
+                seen["copied"] = source.read_text_finish(result)
+                app.quit()
+
+            clipboard.read_text_async(None, copied)
             return GLib.SOURCE_REMOVE
 
         GLib.timeout_add(250, inspect)
@@ -63,3 +75,4 @@ def test_demo_mode_window_lists_every_server(tmp_path: Path, monkeypatch) -> Non
     assert seen["rows"] == len(seen["ports"]) == seen["badge"]
     assert seen["sections"][:2] == ["Pinned", "acme-web"]
     assert "Containers" in seen["sections"]
+    assert seen["copied"] == seen["expected_copy"]

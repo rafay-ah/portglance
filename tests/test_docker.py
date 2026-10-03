@@ -8,6 +8,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -246,6 +247,109 @@ def test_events_invalidate_the_cache(daemon: FakeDaemon) -> None:
         source.snapshot()
         assert time.monotonic() < deadline
         time.sleep(0.01)
+
+
+class ScriptedClient:
+    """A client whose daemon state the test changes between calls."""
+
+    socket_path = "/fake/docker.sock"
+    runtime = "docker"
+
+    def __init__(self, items: list[dict]) -> None:
+        self.items = items
+        self.pids: dict[str, int] = {}
+        self.while_listing = None
+
+    def status(self) -> docker.DockerStatus:
+        return docker.DockerStatus(docker.CONNECTED, self.socket_path, "docker", "27.3.1")
+
+    def containers(self) -> list:
+        result = parse_containers(self.items)
+        if self.while_listing is not None:
+            self.while_listing()
+            self.while_listing = None
+        return result
+
+    def inspect(self, container_id: str) -> dict:
+        pid = self.pids.get(container_id, 4321)
+        return {"State": {"StartedAt": "2026-10-03T08:00:00Z", "Pid": pid}}
+
+
+def test_an_event_during_a_reload_is_not_lost() -> None:
+    client = ScriptedClient(CONTAINERS[:1])
+    source = DockerSource(client, max_age=3600)
+
+    def redis_starts() -> None:  # reported while the list is being read
+        client.items = CONTAINERS
+        source._on_event({"Type": "container", "Action": "start", "id": CONTAINERS[1]["Id"]})
+
+    client.while_listing = redis_starts
+    _, first = source.snapshot()
+    _, second = source.snapshot()
+
+    assert [c.name for c in first] == ["acme-web-db-1"]
+    assert [c.name for c in second] == ["acme-web-db-1", "redis"]
+
+
+def test_restarted_containers_are_inspected_again() -> None:
+    client = ScriptedClient(CONTAINERS[:1])
+    source = DockerSource(client, max_age=3600)
+    container_id = CONTAINERS[0]["Id"]
+    assert source.snapshot()[1][0].pid == 4321
+
+    client.pids[container_id] = 9876
+    source._on_event({"Type": "container", "Action": "restart", "id": container_id})
+
+    assert source.snapshot()[1][0].pid == 9876
+
+
+def test_daemon_is_found_right_after_boot(monkeypatch) -> None:
+    # time.monotonic() counts from boot: early on it is below rediscover_every.
+    monkeypatch.setattr(docker, "time", SimpleNamespace(monotonic=lambda: 5.0))
+    client = ScriptedClient(CONTAINERS)
+    source = DockerSource(discover=lambda: client)
+
+    status, containers = source.snapshot()
+
+    assert status.connected and len(containers) == 2
+
+
+def test_events_are_watched_before_the_first_snapshot(daemon: FakeDaemon) -> None:
+    changed = threading.Event()
+    source = DockerSource(
+        discover=lambda: DockerClient(daemon.server_address), on_change=changed.set
+    )
+
+    source.start_events()
+    thread = source._events_thread
+    try:
+        # Connecting alone asks for a refresh: changes made before the stream
+        # was up would be missed otherwise.
+        assert changed.wait(5)
+    finally:
+        source.stop_events()
+    assert thread is not None
+    thread.join(5)
+    assert not thread.is_alive()
+
+
+def test_restarting_the_watch_leaves_one_thread(daemon: FakeDaemon) -> None:
+    source = DockerSource(DockerClient(daemon.server_address), on_change=lambda: None)
+    source.start_events()
+    first = source._events_thread
+    deadline = time.monotonic() + 5
+    while not any(path.startswith("/events") for _, path in daemon.requests):
+        assert time.monotonic() < deadline
+        time.sleep(0.01)
+
+    source.stop_events()
+    source.start_events()
+    try:
+        assert first is not None
+        first.join(5)
+        assert not first.is_alive()
+    finally:
+        source.stop_events()
 
 
 def test_cgroup_memory(tmp_path: Path) -> None:

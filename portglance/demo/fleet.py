@@ -354,8 +354,18 @@ class DemoDockerClient:
                     self._on_event({"Type": "container", "Action": "die", "id": container_id})
                 return
 
-    def watch_events(self, on_event: Callable[[dict[str, Any]], None]) -> None:
+    def watch_events(
+        self,
+        on_event: Callable[[dict[str, Any]], None],
+        *,
+        on_connect: Callable[[], None] | None = None,
+        stop: threading.Event | None = None,
+    ) -> None:
+        # Block until the source stops watching; close_events() ends it too.
+        self._closed = stop if stop is not None else threading.Event()
         self._on_event = on_event
+        if on_connect is not None:
+            on_connect()
         self._closed.wait()
 
     def close_events(self) -> None:

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import math
 import os
 import re
 import socket
@@ -86,7 +87,8 @@ class DockerClient:
         self.socket_path = socket_path
         self.runtime = runtime
         self.timeout = timeout
-        self._events_conn: UnixHTTPConnection | None = None
+        self._events_lock = threading.Lock()
+        self._events_conns: set[UnixHTTPConnection] = set()
 
     @classmethod
     def discover(cls, env: Mapping[str, str] | None = None) -> DockerClient | None:
@@ -155,16 +157,34 @@ class DockerClient:
             expect_body=False,
         )
 
-    def watch_events(self, on_event: Callable[[dict[str, Any]], None]) -> None:
-        """Block, calling ``on_event`` for each container event, until closed."""
+    def watch_events(
+        self,
+        on_event: Callable[[dict[str, Any]], None],
+        *,
+        on_connect: Callable[[], None] | None = None,
+        stop: threading.Event | None = None,
+    ) -> None:
+        """Block, calling ``on_event`` for each container event.
+
+        Returns when the daemon ends the stream, or when another thread sets
+        ``stop`` and then calls ``close_events()``. ``on_connect`` is called
+        once the daemon has accepted the request.
+        """
         filters = quote(json.dumps({"type": ["container"]}))
         conn = UnixHTTPConnection(self.socket_path, timeout=None)
-        self._events_conn = conn
+        with self._events_lock:
+            self._events_conns.add(conn)
         try:
+            conn.connect()
+            # close_events() cannot shut down a socket that is not connected yet.
+            if stop is not None and stop.is_set():
+                return
             conn.request("GET", f"/events?filters={filters}", headers={"Host": "docker"})
             response = conn.getresponse()
             if response.status != 200:
                 raise DockerError(f"events: HTTP {response.status}")
+            if on_connect is not None:
+                on_connect()
             while True:
                 line = response.readline()
                 if not line:
@@ -178,16 +198,21 @@ class DockerClient:
         except OSError as exc:
             raise DockerError(f"events stream closed: {exc}") from exc
         finally:
-            self._events_conn = None
+            with self._events_lock:
+                self._events_conns.discard(conn)
             conn.close()
 
     def close_events(self) -> None:
-        conn = self._events_conn
-        if conn is not None and conn.sock is not None:
-            try:
-                conn.sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
+        """Make running ``watch_events()`` calls return."""
+        with self._events_lock:
+            conns = list(self._events_conns)
+        for conn in conns:
+            sock = conn.sock
+            if sock is not None:
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except OSError:
+                    pass
 
 
 # --------------------------------------------------------------------------
@@ -294,6 +319,8 @@ class DockerSource:
 
     ``snapshot()`` is cheap while nothing changes: the container list is only
     re-read after an event (or, as a safety net, every ``max_age`` seconds).
+    Call it from one thread at a time; the events thread only marks the
+    cache as stale.
     """
 
     def __init__(
@@ -316,11 +343,13 @@ class DockerSource:
         self._memory = memory_reader or (lambda pid: cgroup_memory(pid, proc_root))
         self._lock = threading.Lock()
         self._containers: list[ContainerInfo] = []
+        # Container id -> (start time, PID), from inspecting it once.
         self._inspected: dict[str, tuple[float | None, int | None]] = {}
+        self._reinspect: set[str] = set()  # ids whose start time or PID changed
         self._status = DockerStatus(UNAVAILABLE)
         self._dirty = True
-        self._loaded_at = 0.0
-        self._discovered_at = 0.0
+        self._loaded_at = -math.inf
+        self._discovered_at = -math.inf
         self._stop = threading.Event()
         self._events_thread: threading.Thread | None = None
 
@@ -340,9 +369,14 @@ class DockerSource:
         """Watch the events stream in a daemon thread (reconnecting with backoff)."""
         if self._events_thread is not None:
             return
-        self._stop.clear()
+        # Each thread gets its own flag, so one that is still winding down
+        # after stop_events() cannot be revived by the next start_events().
+        self._stop = threading.Event()
         self._events_thread = threading.Thread(
-            target=self._events_loop, name="portglance-docker-events", daemon=True
+            target=self._events_loop,
+            args=(self._stop,),
+            name="portglance-docker-events",
+            daemon=True,
         )
         self._events_thread.start()
 
@@ -353,26 +387,37 @@ class DockerSource:
         self._events_thread = None
 
     def snapshot(self) -> tuple[DockerStatus, list[ContainerInfo]]:
-        now = time.monotonic()
-        with self._lock:
-            needs_reload = self._dirty or now - self._loaded_at > self.max_age
-        if self._client is None and now - self._discovered_at > self.rediscover_every:
-            self._discovered_at = now
-            self._client = self._discover()
-            needs_reload = True
-        if self._client is None:
+        client = self._ensure_client()
+        if client is None:
             self._status = DockerStatus(UNAVAILABLE)
             return self._status, []
-        if needs_reload:
-            self._reload(now)
+        now = time.monotonic()
+        with self._lock:
+            reload = self._dirty or now - self._loaded_at > self.max_age
+            if reload:
+                # Cleared before reading, so an event that arrives while the
+                # list is being read makes the next snapshot read it again.
+                self._dirty = False
+                reinspect, self._reinspect = self._reinspect, set()
+        if reload:
+            self._reload(client, now, reinspect)
         for container in self._containers:
             if container.pid:
                 container.memory = self._memory(container.pid)
         return self._status, list(self._containers)
 
-    def _reload(self, now: float) -> None:
-        client = self._client
-        assert client is not None
+    def _ensure_client(self) -> DockerClient | None:
+        """The client, looking for a daemon at most every ``rediscover_every`` seconds."""
+        with self._lock:
+            now = time.monotonic()
+            if self._client is None and now - self._discovered_at >= self.rediscover_every:
+                self._discovered_at = now
+                self._client = self._discover()
+            return self._client
+
+    def _reload(self, client: DockerClient, now: float, reinspect: set[str]) -> None:
+        for container_id in reinspect:
+            self._inspected.pop(container_id, None)
         status = client.status()
         containers: list[ContainerInfo] = []
         if status.connected:
@@ -398,37 +443,43 @@ class DockerSource:
         with self._lock:
             self._status = status
             self._containers = containers
-            self._dirty = False
             self._loaded_at = now
 
-    def _events_loop(self) -> None:
+    def _events_loop(self, stop: threading.Event) -> None:
         delay = 2.0
-        while not self._stop.is_set():
-            client = self._client
+        while not stop.is_set():
+            client = self._ensure_client()
             if client is None:
-                self._stop.wait(self.rediscover_every)
+                retry_at = self._discovered_at + self.rediscover_every
+                stop.wait(max(retry_at - time.monotonic(), 0.1))
                 continue
             started = time.monotonic()
             try:
-                client.watch_events(self._on_event)
+                # Whatever changed while the stream was down is only seen by
+                # reading the list again, hence _changed() once connected.
+                client.watch_events(self._on_event, on_connect=self._changed, stop=stop)
             except DockerError:
                 pass
-            if self._stop.is_set():
+            if stop.is_set():
                 break
             # The stream ended (daemon restarted, socket went away...).
-            self.invalidate()
-            if self.on_change:
-                self.on_change()
+            self._changed()
             delay = 2.0 if time.monotonic() - started > 60 else min(delay * 2, 60.0)
-            self._stop.wait(delay)
+            stop.wait(delay)
+
+    def _changed(self) -> None:
+        self.invalidate()
+        if self.on_change is not None:
+            self.on_change()
 
     def _on_event(self, event: dict[str, Any]) -> None:
         action = str(event.get("Action") or event.get("status") or "").split(":")[0]
         if action not in REFRESH_ACTIONS:
             return
-        if action in ("start", "restart", "die", "stop"):
-            container_id = str(event.get("id") or (event.get("Actor") or {}).get("ID") or "")
-            self._inspected.pop(container_id, None)
-        self.invalidate()
-        if self.on_change:
+        with self._lock:
+            if action in ("start", "restart", "die", "stop"):
+                container_id = str(event.get("id") or (event.get("Actor") or {}).get("ID") or "")
+                self._reinspect.add(container_id)
+            self._dirty = True
+        if self.on_change is not None:
             self.on_change()

@@ -99,8 +99,9 @@ class Scanner:
         ]
 
         docker_status = None
-        if self.docker is not None:
-            docker_status, containers = self.docker.snapshot()
+        docker = self.docker  # read once: the UI thread may turn containers off meanwhile
+        if docker is not None:
+            docker_status, containers = docker.snapshot()
             entries = self._merge_containers(entries, containers)
 
         pinned_ports = set(pinned)

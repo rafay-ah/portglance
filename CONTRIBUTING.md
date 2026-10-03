@@ -42,5 +42,14 @@ The GTK smoke test runs when a display is available; CI runs it under Xvfb.
 1. Update `__version__` in `portglance/__init__.py`, the `<releases>` entry in
    `data/io.github.rafay_ah.PortGlance.metainfo.xml`, the man page header and
    `CHANGELOG.md`.
-2. Tag the commit `vX.Y.Z` and publish a GitHub release for the tag. The *Release*
-   workflow tests, builds the `.deb` and the AppImage, and attaches them with checksums.
+2. Tag the commit and push the tag:
+
+   ```sh
+   git tag -a vX.Y.Z -m "PortGlance X.Y.Z"
+   git push origin vX.Y.Z
+   ```
+
+   The *Release* workflow checks that the versions match, runs the tests, builds the
+   `.deb` and the AppImage, and publishes the GitHub release with them, their checksums
+   and the changelog entry as release notes. A release published from the web UI gets
+   the files attached as well.

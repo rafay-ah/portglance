@@ -1,14 +1,22 @@
 name: Release
 
-# Builds the .deb and the AppImage. On a published release the files are
-# attached to it; a manual run keeps them as workflow artifacts only.
+# Builds the .deb and the AppImage. Pushing a vX.Y.Z tag publishes a GitHub
+# release with them, and a release published from the web UI gets them
+# attached; a manual run keeps them as workflow artifacts only.
 on:
+  push:
+    tags: ["v*"]
   release:
     types: [published]
   workflow_dispatch:
 
 permissions:
   contents: write
+
+# A release made in the web UI can also push its tag: run one at a time.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -26,15 +34,20 @@ jobs:
             libglib2.0-bin shared-mime-info desktop-file-utils appstream lintian \
             xvfb xauth dbus-x11 curl file
 
-      - name: Check the release tag matches the version
-        if: github.event_name == 'release'
+      - name: Check the tag matches the version
+        if: github.event_name != 'workflow_dispatch'
+        env:
+          TAG: ${{ github.ref_name }}
         run: |
           version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' portglance/__init__.py)"
-          tag="${{ github.event.release.tag_name }}"
-          if [ "${tag#v}" != "$version" ]; then
-            echo "::error::Release tag $tag does not match __version__ $version"
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "::error::Tag $TAG does not match __version__ $version"
             exit 1
           fi
+          grep -q "^## \[$version\]" CHANGELOG.md ||
+            { echo "::error::CHANGELOG.md has no entry for $version"; exit 1; }
+          grep -q "<release version=\"$version\"" data/*.metainfo.xml ||
+            { echo "::error::The AppStream metadata has no release $version"; exit 1; }
 
       - name: Test
         run: dbus-run-session -- xvfb-run -a /usr/bin/python3 -m pytest
@@ -79,8 +92,21 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-      - name: Attach to the release
-        if: github.event_name == 'release'
+      - name: Publish the release
+        if: github.event_name != 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+          else
+            # The notes are the version's CHANGELOG.md entry.
+            awk -v heading="## [${TAG#v}]" '
+              index($0, heading) == 1 { found = 1; next }
+              found && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+              found { print }
+            ' CHANGELOG.md > release-notes.md
+            gh release create "$TAG" dist/* --verify-tag \
+              --title "PortGlance ${TAG#v}" --notes-file release-notes.md
+          fi

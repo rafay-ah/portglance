@@ -56,5 +56,5 @@ a CLI (`portglance list|kill|doctor`).
 - Try UI changes with `python3 -m portglance --demo` (fake servers, isolated
   settings, no autostart changes).
 - Packaging: `packaging/deb/build-deb.sh`, `packaging/appimage/build-appimage.sh`.
-  The Release workflow builds both on published releases (`vX.Y.Z` tags must
-  match `__version__`).
+  Pushing a `vX.Y.Z` tag (it must match `__version__`) makes the Release
+  workflow build both and publish the GitHub release.

@@ -35,3 +35,26 @@ Rules:
   without the owner's permission.
 - Commit often, with clear, descriptive messages (imperative subject line,
   wrapped body explaining the why).
+
+## Project notes
+
+PortGlance is a GTK 4 / libadwaita app (Python, PyGObject) that shows listening
+dev ports, with a StatusNotifierItem panel indicator, Docker/Podman support and
+a CLI (`portglance list|kill|doctor`).
+
+- `portglance/core/` must not import GTK; it is used by the CLI and the tests.
+- `portglance/ui/` targets GTK 4.14 and libadwaita 1.5 (Ubuntu 24.04). Do not
+  use newer APIs (e.g. `Adw.Spinner`, `Adw.ToggleGroup`, CSS variables)
+  without a fallback.
+- Run before committing:
+
+  ```sh
+  ruff check . && ruff format --check .
+  pytest                      # set DISPLAY (e.g. Xvfb) to include the GTK smoke test
+  ```
+
+- Try UI changes with `python3 -m portglance --demo` (fake servers, isolated
+  settings, no autostart changes).
+- Packaging: `packaging/deb/build-deb.sh`, `packaging/appimage/build-appimage.sh`.
+  The Release workflow builds both on published releases (`vX.Y.Z` tags must
+  match `__version__`).

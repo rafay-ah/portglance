@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import pwd
+from functools import lru_cache
 
 from .model import is_loopback
 
@@ -60,3 +62,13 @@ def shorten_path(path: str | None, home: str | None = None) -> str:
     if path.startswith(home.rstrip("/") + "/"):
         return "~" + path[len(home.rstrip("/")) :]
     return path
+
+
+@lru_cache(maxsize=64)
+def user_name(uid: int | None) -> str:
+    if uid is None:
+        return "unknown"
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except KeyError:
+        return str(uid)

@@ -49,7 +49,11 @@ def decode_address(hex_addr: str) -> tuple[str, int]:
     raw = b"".join(
         int(host[i : i + 8], 16).to_bytes(4, sys.byteorder) for i in range(0, len(host), 8)
     )
-    return str(ipaddress.ip_address(raw)), int(port, 16)
+    ip = ipaddress.ip_address(raw)
+    mapped = getattr(ip, "ipv4_mapped", None)
+    # Spell IPv4-mapped addresses the same way on every Python version.
+    text = f"::ffff:{mapped}" if mapped is not None else str(ip)
+    return text, int(port, 16)
 
 
 def parse_net_table(text: str, proto: str, family: int) -> Iterator[ListeningSocket]:

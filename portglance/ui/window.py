@@ -9,7 +9,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk
 from .. import APP_ID, APP_NAME
 from ..core.grouping import PROJECT, Section, group_entries
 from ..core.scanner import Snapshot
-from .rows import FreePortRow, PortRow, SectionHeader
+from .rows import FreePortRow, PortRow, SectionHeader, set_accessible_label
 
 
 class PortListView(Adw.Bin):
@@ -175,6 +175,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.search_button = Gtk.ToggleButton(
             icon_name="system-search-symbolic", tooltip_text="Search (Ctrl+F)"
         )
+        set_accessible_label(self.search_button, "Search")
         header.pack_start(self.search_button)
         menu_button = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
@@ -182,6 +183,7 @@ class MainWindow(Adw.ApplicationWindow):
             primary=True,
             tooltip_text="Main Menu",
         )
+        set_accessible_label(menu_button, "Main menu")
         header.pack_end(menu_button)
         toolbar.add_top_bar(header)
 

@@ -32,6 +32,11 @@ def address_for(entry: PortEntry) -> str:
     return f"localhost:{entry.port}"
 
 
+def set_accessible_label(widget: Gtk.Widget, text: str) -> None:
+    """Give icon-only buttons a name for screen readers (tooltips are not enough)."""
+    widget.update_property([Gtk.AccessibleProperty.LABEL], [text])
+
+
 class PortBadge(Gtk.Box):
     """The rounded tile with the port number and protocol."""
 
@@ -110,6 +115,7 @@ class PortRow(Gtk.ListBoxRow):
             css_classes=["flat", "circular", "row-action"],
             tooltip_text="More Actions",
         )
+        set_accessible_label(self.menu_button, "More actions")
         actions = Gtk.Box(spacing=2, valign=Gtk.Align.CENTER)
         for button in (self.open_button, self.stop_button, self.menu_button):
             actions.append(button)
@@ -170,11 +176,13 @@ class PortRow(Gtk.ListBoxRow):
         self.open_button.set_can_focus(entry.http)
         _bind(self.open_button, "app.open-url", GLib.Variant("s", entry.url))
         self.open_button.set_tooltip_text(f"Open {entry.url}" if entry.http else None)
+        set_accessible_label(self.open_button, f"Open {entry.url} in the browser")
         self.stop_button.set_visible(entry.killable)
         _bind(self.stop_button, "app.stop", GLib.Variant("s", entry.key))
         self.stop_button.set_tooltip_text(
             "Stop Container" if container is not None else "Stop Process"
         )
+        set_accessible_label(self.stop_button, f"Stop {name} on port {entry.port}")
         self._update_menu()
 
     def set_show_project(self, show: bool) -> None:
@@ -297,6 +305,7 @@ class FreePortRow(Gtk.ListBoxRow):
             action_name="app.toggle-pin",
             action_target=GLib.Variant("i", port),
         )
+        set_accessible_label(unpin, f"Unpin port {port}")
         layout.append(unpin)
         self.set_child(layout)
 
@@ -358,6 +367,7 @@ class SectionHeader(Gtk.Box):
         self.folder_button.set_visible(has_folder)
         if has_folder:
             _bind(self.folder_button, "app.open-folder", GLib.Variant("s", root))
+            set_accessible_label(self.folder_button, f"Open the {section.title} folder")
 
 
 def _bind(widget: Gtk.Actionable, action: str, target: GLib.Variant) -> None:

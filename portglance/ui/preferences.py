@@ -156,6 +156,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 action_name="app.toggle-pin",
                 action_target=GLib.Variant("i", port),
             )
+            remove.update_property([Gtk.AccessibleProperty.LABEL], [f"Unpin port {port}"])
             row.add_suffix(remove)
             self._pinned_group.add(row)
             self._pin_rows.append(row)

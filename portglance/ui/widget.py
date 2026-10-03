@@ -10,7 +10,7 @@ from ..core.model import PortEntry
 from ..core.scanner import Snapshot
 from . import pinning
 from .indicator import sort_key
-from .rows import address_for
+from .rows import address_for, set_accessible_label
 
 WIDGET_TITLE = f"{APP_NAME} Widget"
 MAX_ROWS = 12
@@ -56,6 +56,7 @@ class WidgetRow(Gtk.ListBoxRow):
             action_target=GLib.Variant("s", entry.key),
             sensitive=entry.killable,
         )
+        set_accessible_label(stop, f"Stop {display_label(entry)} on port {entry.port}")
         box.append(stop)
         self.set_child(box)
         self.set_tooltip_text(entry.url if entry.http else address_for(entry))
@@ -93,24 +94,26 @@ class DesktopWidget(Gtk.Window):
             tooltip_text="Keep on Top",
             valign=Gtk.Align.CENTER,
         )
+        set_accessible_label(self.pin_button, "Keep on top")
         self.pin_button.set_active(bool(app.settings.get("widget_pinned")))
         self.pin_button.connect("toggled", self._on_pin_toggled)
         header.append(self.pin_button)
-        header.append(
-            Gtk.Button(
-                icon_name="view-list-bullet-symbolic",
-                css_classes=["flat", "circular", "widget-button"],
-                tooltip_text=f"Open {APP_NAME}",
-                action_name="app.show-window",
-                valign=Gtk.Align.CENTER,
-            )
+        open_app = Gtk.Button(
+            icon_name="view-list-bullet-symbolic",
+            css_classes=["flat", "circular", "widget-button"],
+            tooltip_text=f"Open {APP_NAME}",
+            action_name="app.show-window",
+            valign=Gtk.Align.CENTER,
         )
+        set_accessible_label(open_app, f"Open {APP_NAME}")
+        header.append(open_app)
         close = Gtk.Button(
             icon_name="window-close-symbolic",
             css_classes=["flat", "circular", "widget-button"],
             tooltip_text="Hide Widget",
             valign=Gtk.Align.CENTER,
         )
+        set_accessible_label(close, "Hide widget")
         close.connect("clicked", lambda _b: app.set_widget_visible(False))
         header.append(close)
         card.append(header)

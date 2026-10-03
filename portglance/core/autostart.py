@@ -81,7 +81,7 @@ def _read_entry(path: Path) -> configparser.SectionProxy | None:
     parser = configparser.ConfigParser(interpolation=None, strict=False)
     parser.optionxform = str  # keys are case-sensitive
     try:
-        parser.read(path, encoding="utf-8")
+        parser.read_string(path.read_text(encoding="utf-8", errors="replace"), str(path))
     except (OSError, configparser.Error):
         return None
     if not parser.has_section("Desktop Entry"):
@@ -121,7 +121,7 @@ def refresh(command: Sequence[str] | None = None, path: Path | None = None) -> N
         return
     desired = render_entry(command or launch_command())
     try:
-        current = path.read_text(encoding="utf-8")
+        current = path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         current = ""
     if current != desired:

@@ -294,7 +294,7 @@ def cgroup_memory(
 ) -> int | None:
     """Memory usage of the cgroup ``pid`` lives in (cgroup v2), in bytes."""
     try:
-        with open(f"{proc_root}/{pid}/cgroup", encoding="utf-8") as fh:
+        with open(f"{proc_root}/{pid}/cgroup", encoding="utf-8", errors="surrogateescape") as fh:
             lines = fh.read().splitlines()
     except OSError:
         return None

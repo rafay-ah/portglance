@@ -70,6 +70,16 @@ def test_refresh_follows_a_moved_appimage(xdg_config: Path) -> None:
     assert "Exec=/new/PortGlance.AppImage --background" in autostart.autostart_path().read_text()
 
 
+def test_entry_edited_into_another_encoding(xdg_config: Path) -> None:
+    autostart.set_enabled(True, ["/old/PortGlance.AppImage"])
+    path = autostart.autostart_path()
+    path.write_bytes(path.read_bytes() + b"Comment[fr]=D\xe9marrage\n")  # Latin-1
+
+    assert autostart.is_enabled()
+    autostart.refresh(["/new/PortGlance.AppImage"])
+    assert "Exec=/new/PortGlance.AppImage --background" in path.read_text()
+
+
 def test_refresh_does_not_enable(xdg_config: Path) -> None:
     autostart.refresh(["/usr/bin/portglance"])
     assert not autostart.autostart_path().exists()

@@ -113,6 +113,15 @@ def test_read_process(fake_proc: FakeProc, tmp_path: Path) -> None:
     assert info.uid == os.geteuid()
 
 
+def test_paths_that_are_not_utf8_can_be_displayed(fake_proc: FakeProc) -> None:
+    fake_proc.add_process(901, comm="node", cwd=os.fsdecode(b"/srv/caf\xe9"))
+
+    info = procfs.read_process(901, fake_proc.path)
+
+    assert info is not None
+    assert info.cwd == "/srv/caf\ufffd"  # GTK and D-Bus reject "caf\udce9"
+
+
 def test_read_process_that_vanished(fake_proc: FakeProc) -> None:
     assert procfs.read_process(424242, fake_proc.path) is None
 

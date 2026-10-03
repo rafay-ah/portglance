@@ -103,6 +103,26 @@ def test_submodule_with_relative_gitdir(resolver: ProjectResolver, home: Path) -
     assert result.project.branch == "main"
 
 
+def test_branch_names_that_are_not_utf8(resolver: ProjectResolver, home: Path) -> None:
+    repo = make_repo(home / "code" / "cafe")
+    (repo / ".git" / "HEAD").write_bytes(b"ref: refs/heads/caf\xe9\n")
+
+    assert resolver.resolve(str(repo)).project.branch == "caf\ufffd"
+
+
+def test_worktree_gitdir_that_is_not_utf8(resolver: ProjectResolver, home: Path) -> None:
+    main = make_repo(home / "code" / "app")
+    gitdir = os.path.join(os.fsencode(main), b".git", b"worktrees", b"caf\xe9")
+    os.makedirs(gitdir)
+    with open(os.path.join(gitdir, b"HEAD"), "wb") as fh:
+        fh.write(b"ref: refs/heads/feature\n")
+    worktree = home / "code" / "app-feature"
+    worktree.mkdir(parents=True)
+    (worktree / ".git").write_bytes(b"gitdir: " + gitdir + b"\n")
+
+    assert resolver.resolve(str(worktree)).project.branch == "feature"
+
+
 def test_detached_head_shows_short_commit(tmp_path: Path) -> None:
     head = tmp_path / "HEAD"
     head.write_text("3f2a9c1d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f\n")

@@ -215,7 +215,8 @@ def _head_file(root: str) -> str | None:
     if os.path.isdir(dotgit):
         return os.path.join(dotgit, "HEAD")
     try:
-        with open(dotgit, encoding="utf-8") as fh:
+        # surrogateescape keeps a gitdir path that is not UTF-8 usable.
+        with open(dotgit, encoding="utf-8", errors="surrogateescape") as fh:
             content = fh.read().strip()
     except OSError:
         return None
@@ -229,7 +230,7 @@ def _head_file(root: str) -> str | None:
 
 def read_branch(head_file: str) -> str | None:
     try:
-        with open(head_file, encoding="utf-8") as fh:
+        with open(head_file, encoding="utf-8", errors="replace") as fh:
             head = fh.read().strip()
     except OSError:
         return None

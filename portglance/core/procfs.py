@@ -234,8 +234,10 @@ def read_stat(pid: int, proc_root: str = "/proc") -> tuple[str, int, int, int] |
 
 
 def _readlink(path: str) -> str | None:
+    # Decoded like the command line: the result is shown to the user, and a
+    # path that is not valid UTF-8 could not be displayed otherwise.
     try:
-        target = os.readlink(path)
+        target = os.readlink(os.fsencode(path)).decode("utf-8", errors="replace")
     except OSError:
         return None
     if target.endswith(" (deleted)"):

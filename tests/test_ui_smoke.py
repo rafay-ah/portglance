@@ -59,7 +59,21 @@ def test_demo_mode_window_lists_every_server(tmp_path: Path, monkeypatch) -> Non
 
             def copied(source, result) -> None:
                 seen["copied"] = source.read_text_finish(result)
+                check_widget_and_notifications()
                 app.quit()
+
+            def check_widget_and_notifications() -> None:
+                app.set_widget_visible(True)
+                app.widget.close()  # what Alt+F4 or the window menu do
+                seen["widget_visible"] = app.widget.get_visible()
+                seen["widget_setting"] = app.settings.get("widget_visible")
+                seen["widget_action"] = app.lookup_action("widget").get_state().unpack()
+                # Demo mode has no desktop file: notifications go over D-Bus.
+                window.set_visible(False)
+                try:
+                    app.notify("Stopped “a & <b>” on port 1", "It had <already> exited")
+                except Exception as exc:  # reported by the assertion below
+                    seen["notify_error"] = exc
 
             clipboard.read_text_async(None, copied)
             return GLib.SOURCE_REMOVE
@@ -76,3 +90,5 @@ def test_demo_mode_window_lists_every_server(tmp_path: Path, monkeypatch) -> Non
     assert seen["sections"][:2] == ["Pinned", "acme-web"]
     assert "Containers" in seen["sections"]
     assert seen["copied"] == seen["expected_copy"]
+    assert seen["widget_visible"] is seen["widget_setting"] is seen["widget_action"] is False
+    assert "notify_error" not in seen

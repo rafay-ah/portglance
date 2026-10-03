@@ -147,6 +147,7 @@ class PortGlanceApplication(Adw.Application):
             if self.widget is None:
                 self.widget = DesktopWidget(self)
                 self.widget.set_hide_on_close(True)
+                self.widget.connect("close-request", self._on_widget_close_request)
                 self.widget.connect("notify::visible", self._on_visibility_changed)
                 if self.snapshot is not None:
                     self.widget.update(self.snapshot)
@@ -159,6 +160,11 @@ class PortGlanceApplication(Adw.Application):
                 self.quit()
         self.settings.set("widget_visible", visible)
         self._sync_action_states()
+
+    def _on_widget_close_request(self, _widget) -> bool:
+        # Alt+F4 or the window menu: the same as the widget's own close button.
+        self.set_widget_visible(False)
+        return True
 
     def show_preferences(self, token: str | None = None) -> None:
         from .preferences import PreferencesDialog

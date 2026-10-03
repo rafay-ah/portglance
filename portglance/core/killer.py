@@ -7,6 +7,7 @@ A pidfd refers to one specific process, so a PID that gets recycled between
 
 from __future__ import annotations
 
+import math
 import os
 import select
 import signal
@@ -88,7 +89,8 @@ class _Target:
             poller = select.poll()
             poller.register(self.fd, select.POLLIN)
             remaining = max(0.0, deadline - time.monotonic())
-            return bool(poller.poll(int(remaining * 1000)))
+            # Round up: never give up (and escalate to SIGKILL) before the deadline.
+            return bool(poller.poll(math.ceil(remaining * 1000)))
         while time.monotonic() < deadline:
             if not self.alive():
                 return True

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from gi.repository import Gio, GLib, Gtk
 
+from ..core.hostenv import host_environ
 from .resources import SHELL_EXTENSION_DIR
 
 EXTENSION_UUID = "portglance-helper@rafay-ah.github.io"
@@ -131,7 +132,10 @@ def _enable_extension() -> None:
             pass
     if shutil.which("gnome-extensions"):
         subprocess.run(
-            ["gnome-extensions", "enable", EXTENSION_UUID], check=False, capture_output=True
+            ["gnome-extensions", "enable", EXTENSION_UUID],
+            check=False,
+            capture_output=True,
+            env=host_environ(),
         )
 
 

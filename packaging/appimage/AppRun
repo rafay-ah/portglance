@@ -1,0 +1,37 @@
+#!/bin/sh
+# Entry point of the PortGlance AppImage: point the bundled Python, GTK and
+# GLib at the files inside the image, then start PortGlance.
+set -e
+HERE="$(dirname "$(readlink -f "$0")")"
+
+# Remember the host's values so PortGlance can hand a clean environment to
+# the programs it launches (browser, file manager).
+for var in LD_LIBRARY_PATH PYTHONHOME PYTHONPATH PYTHONDONTWRITEBYTECODE PYTHONNOUSERSITE \
+           GI_TYPELIB_PATH GIO_MODULE_DIR GSETTINGS_SCHEMA_DIR GDK_PIXBUF_MODULE_FILE XDG_DATA_DIRS; do
+    eval "isset=\${$var+x}"
+    if [ -n "$isset" ]; then
+        eval "export PORTGLANCE_HOST_$var=\"\$$var\""
+    else
+        export "PORTGLANCE_HOST_$var=__unset__"
+    fi
+done
+
+export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export PYTHONHOME="$HERE/usr"
+export PYTHONPATH="$HERE/usr/lib/python3/dist-packages"
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONNOUSERSITE=1
+export GI_TYPELIB_PATH="$HERE/usr/lib/girepository-1.0"
+export GIO_MODULE_DIR="$HERE/usr/lib/gio/modules"
+export GSETTINGS_SCHEMA_DIR="$HERE/usr/share/glib-2.0/schemas"
+export XDG_DATA_DIRS="$HERE/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+# gdk-pixbuf needs absolute loader paths; rewrite the cache for this mount.
+loaders="$HERE/usr/lib/gdk-pixbuf-2.0/2.10.0"
+cache_dir="${XDG_RUNTIME_DIR:-/tmp}"
+key="$(printf '%s' "$HERE" | cksum | cut -d ' ' -f 1)"
+cache="$cache_dir/portglance-pixbuf-loaders-$(id -u)-$key.cache"
+sed "s|@LOADERS_DIR@|$loaders/loaders|g" "$loaders/loaders.cache.in" > "$cache"
+export GDK_PIXBUF_MODULE_FILE="$cache"
+
+exec "$HERE/usr/bin/python3" -s -m portglance "$@"

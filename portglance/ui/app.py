@@ -16,6 +16,7 @@ from ..core.model import PortEntry
 from ..core.scanner import Snapshot
 from ..core.settings import SettingsStore
 from .indicator import PanelIndicator
+from .launch import launch_context
 from .monitor import PortMonitor
 from .resources import ICONS_DIR, UI_DIR
 from .window import MainWindow
@@ -295,43 +296,20 @@ class PortGlanceApplication(Adw.Application):
         self.send_notification(None, notification)
 
     def open_url(self, url: str, token: str | None = None) -> None:
-        if token:
-            # Pass the panel's activation token on so the browser gets focus.
-            context = Gio.AppLaunchContext()
-            context.setenv("XDG_ACTIVATION_TOKEN", token)
-            try:
-                Gio.AppInfo.launch_default_for_uri(url, context)
-                return
-            except GLib.Error:
-                pass
-        launcher = Gtk.UriLauncher.new(url)
-
-        def done(source, result) -> None:
-            try:
-                source.launch_finish(result)
-            except GLib.Error as exc:
-                self.notify("Could not open the browser", exc.message)
-
-        launcher.launch(self._parent(), None, done)
+        self._launch_uri(url, token, "Could not open the browser")
 
     def open_folder(self, path: str, token: str | None = None) -> None:
-        if token:
-            context = Gio.AppLaunchContext()
-            context.setenv("XDG_ACTIVATION_TOKEN", token)
-            try:
-                Gio.AppInfo.launch_default_for_uri(Gio.File.new_for_path(path).get_uri(), context)
-                return
-            except GLib.Error:
-                pass
-        launcher = Gtk.FileLauncher.new(Gio.File.new_for_path(path))
+        uri = Gio.File.new_for_path(path).get_uri()
+        self._launch_uri(uri, token, "Could not open the folder")
 
-        def done(source, result) -> None:
+    def _launch_uri(self, uri: str, token: str | None, error_title: str) -> None:
+        def done(_source, result) -> None:
             try:
-                source.launch_finish(result)
+                Gio.AppInfo.launch_default_for_uri_finish(result)
             except GLib.Error as exc:
-                self.notify("Could not open the folder", exc.message)
+                self.notify(error_title, exc.message)
 
-        launcher.launch(self._parent(), None, done)
+        Gio.AppInfo.launch_default_for_uri_async(uri, launch_context(token), None, done)
 
     def copy_text(self, text: str) -> None:
         display = Gdk.Display.get_default()

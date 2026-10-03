@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=PortGlance
+GenericName=Port Monitor
+Comment=See which dev servers are listening, at a glance
+Exec=portglance
+Icon=io.github.rafay_ah.PortGlance
+Terminal=false
+Categories=Development;GTK;
+Keywords=port;ports;localhost;server;dev;docker;podman;kill;listen;process;
+StartupNotify=true
+SingleMainWindow=true
+Actions=widget;
+
+[Desktop Action widget]
+Name=Show Desktop Widget
+Exec=portglance --widget

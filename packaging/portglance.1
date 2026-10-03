@@ -1,0 +1,80 @@
+.TH PORTGLANCE 1 "October 2026" "PortGlance 0.1.0" "User Commands"
+.SH NAME
+portglance \- see which dev servers are listening, at a glance
+.SH SYNOPSIS
+.B portglance
+.RB [ \-\-background | \-\-widget | \-\-demo | \-\-quit ]
+.br
+.B portglance list
+.RB [ \-\-all ]
+.RB [ \-\-udp ]
+.RB [ \-\-json ]
+.RB [ \-\-no\-docker ]
+.br
+.B portglance kill
+.I PORT
+.RB [ \-\-yes ]
+.RB [ \-\-timeout
+.IR SECONDS ]
+.RB [ \-\-force ]
+.SH DESCRIPTION
+.B PortGlance
+shows the TCP ports your development servers listen on, together with the
+process, PID, uptime, memory use and the project each one belongs to (the git
+repository containing the process' working directory). Docker and Podman
+containers are listed with their published ports.
+.PP
+Without a subcommand, the graphical application starts, or the running
+instance is brought to the front. It keeps running in the background with a
+top-panel indicator showing the number of dev ports in use.
+.SH OPTIONS
+.TP
+.B \-\-background
+Start with only the top-panel indicator. Used by the login autostart entry.
+.TP
+.B \-\-widget
+Show the desktop widget.
+.TP
+.B \-\-demo
+Start a few fake dev servers in throwaway projects and show them. Settings
+and the autostart entry are not touched.
+.TP
+.B \-\-quit
+Quit the running instance.
+.SH COMMANDS
+.TP
+.B list
+Print the dev ports as a table.
+.B \-\-all
+includes system ports,
+.B \-\-udp
+includes UDP sockets,
+.B \-\-json
+prints machine-readable output and
+.B \-\-no\-docker
+skips containers.
+.TP
+.BI kill " PORT"
+Stop whatever listens on
+.IR PORT .
+Processes receive SIGTERM and, if they are still running after
+.B \-\-timeout
+seconds (default 5), SIGKILL.
+.B \-\-force
+sends SIGKILL straight away. Containers are stopped through the Docker or
+Podman API. Asks for confirmation unless
+.B \-\-yes
+is given.
+.SH FILES
+.TP
+.I ~/.config/portglance/settings.json
+Preferences.
+.TP
+.I ~/.config/autostart/io.github.rafay_ah.PortGlance.desktop
+Start-on-login entry, created on first run.
+.SH SEE ALSO
+.BR ss (8),
+.BR lsof (8),
+.BR fuser (1)
+.PP
+https://github.com/rafay-ah/portglance

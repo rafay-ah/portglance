@@ -28,7 +28,7 @@ from .core.formatting import (
 from .core.model import PortEntry
 from .core.scanner import Scanner, Snapshot
 
-CLI_COMMANDS = ("list", "ls", "kill")
+CLI_COMMANDS = ("list", "ls", "kill", "doctor")
 
 
 def gui_parser() -> argparse.ArgumentParser:
@@ -39,6 +39,7 @@ def gui_parser() -> argparse.ArgumentParser:
             "terminal commands:\n"
             "  portglance list [--all] [--json]   print listening ports\n"
             "  portglance kill PORT [--yes]       stop whatever listens on PORT\n"
+            "  portglance doctor                  check the environment, for bug reports\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -80,6 +81,8 @@ def cli_parser() -> argparse.ArgumentParser:
     )
     kill_cmd.add_argument("-f", "--force", action="store_true", help="send SIGKILL straight away")
     kill_cmd.add_argument("--no-docker", action="store_true", help="skip Docker/Podman")
+
+    sub.add_parser("doctor", help="check the environment PortGlance runs in")
     return parser
 
 
@@ -90,6 +93,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         try:
             if options.command in ("list", "ls"):
                 return cmd_list(options)
+            if options.command == "doctor":
+                from .doctor import run_doctor
+
+                return run_doctor()
             return cmd_kill(options)
         except BrokenPipeError:
             # Output piped into something like `head` that stopped reading.

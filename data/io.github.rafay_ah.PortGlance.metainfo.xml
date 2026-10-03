@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.rafay_ah.PortGlance</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>PortGlance</name>
+  <summary>See which dev servers are listening, at a glance</summary>
+  <developer id="io.github.rafay_ah">
+    <name>rafay-ah</name>
+  </developer>
+  <description>
+    <p>
+      PortGlance keeps an eye on the ports your dev servers listen on. A
+      top-panel indicator shows how many are running; click it for the list.
+    </p>
+    <ul>
+      <li>See the port, protocol, process, PID, uptime and memory of every listener</li>
+      <li>Know which project each server belongs to: its git repository and branch</li>
+      <li>Docker and Podman containers with their published ports and Compose projects</li>
+      <li>Stop a server in one click: SIGTERM first, SIGKILL if it does not exit</li>
+      <li>Open any HTTP port in the browser</li>
+      <li>System services stay out of the way unless you ask for them</li>
+      <li>Pin the ports you care about and a compact desktop widget</li>
+    </ul>
+    <p>
+      PortGlance reads the kernel's socket tables directly and only does the
+      expensive work when a new listener appears, so it stays light.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.rafay_ah.PortGlance.desktop</launchable>
+  <url type="homepage">https://github.com/rafay-ah/portglance</url>
+  <url type="bugtracker">https://github.com/rafay-ah/portglance/issues</url>
+  <url type="vcs-browser">https://github.com/rafay-ah/portglance</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Dev servers grouped by project</caption>
+      <image>https://raw.githubusercontent.com/rafay-ah/portglance/main/docs/media/window.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The top-panel indicator and its menu</caption>
+      <image>https://raw.githubusercontent.com/rafay-ah/portglance/main/docs/media/indicator.png</image>
+    </screenshot>
+  </screenshots>
+  <content_rating type="oars-1.1"/>
+  <provides>
+    <binary>portglance</binary>
+  </provides>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <releases>
+    <release version="0.1.0" date="2026-10-03">
+      <description>
+        <p>First release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

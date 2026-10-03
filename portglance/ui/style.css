@@ -1,0 +1,263 @@
+/* PortGlance stylesheet. Colors come from libadwaita's named colors so the
+ * app follows the system's light/dark style and accent color. Framework chip
+ * colors have dark-mode variants in style-dark.css. */
+
+@define-color pg_docker #1d63ed;
+@define-color pg_podman #892ca0;
+
+/* ---- Port badge --------------------------------------------------------- */
+
+.port-badge {
+  min-width: 62px;
+  min-height: 46px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: alpha(@accent_bg_color, 0.13);
+  color: @accent_color;
+}
+
+.port-badge .port-number {
+  font-size: 1.22em;
+  font-weight: 800;
+}
+
+.port-badge .port-proto {
+  font-size: 0.66em;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  opacity: 0.7;
+}
+
+.port-badge.container {
+  background-color: alpha(@pg_docker, 0.13);
+  color: @pg_docker;
+}
+
+.port-badge.container.podman {
+  background-color: alpha(@pg_podman, 0.13);
+  color: @pg_podman;
+}
+
+.port-badge.system {
+  background-color: alpha(currentColor, 0.07);
+  color: alpha(@window_fg_color, 0.75);
+}
+
+.port-badge.free {
+  background-color: transparent;
+  border: 1px dashed alpha(@window_fg_color, 0.28);
+  color: alpha(@window_fg_color, 0.5);
+}
+
+.port-badge.stopping {
+  background-color: alpha(@destructive_bg_color, 0.12);
+  color: @destructive_color;
+}
+
+/* ---- Rows --------------------------------------------------------------- */
+
+.port-row {
+  padding: 8px 10px 8px 8px;
+}
+
+.port-row .process-name {
+  font-weight: 700;
+}
+
+.port-row .details {
+  font-size: 0.86em;
+}
+
+.port-row.stopping .process-name,
+.port-row.stopping .details {
+  opacity: 0.55;
+}
+
+.port-row .row-action {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.port-row .row-action.stop:hover {
+  color: @destructive_color;
+  background-color: alpha(@destructive_bg_color, 0.12);
+}
+
+.exposed-icon {
+  color: @warning_color;
+}
+
+.pinned-icon {
+  color: alpha(@window_fg_color, 0.55);
+}
+
+/* ---- Chips -------------------------------------------------------------- */
+
+.chip {
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 0.74em;
+  font-weight: 800;
+  background-color: alpha(currentColor, 0.1);
+  color: alpha(@window_fg_color, 0.78);
+}
+
+.chip.branch {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 0.78em;
+}
+
+.chip.exposed {
+  color: @warning_color;
+  background-color: alpha(@warning_bg_color, 0.14);
+}
+
+.chip.fw-vite { color: #6b4ee6; background-color: alpha(#6b4ee6, 0.12); }
+.chip.fw-nextjs { color: #1f1f1f; background-color: alpha(#1f1f1f, 0.08); }
+.chip.fw-nuxt { color: #00a76f; background-color: alpha(#00a76f, 0.12); }
+.chip.fw-astro { color: #e0480c; background-color: alpha(#ff5d01, 0.12); }
+.chip.fw-sveltekit { color: #e03a00; background-color: alpha(#ff3e00, 0.12); }
+.chip.fw-angular { color: #d10031; background-color: alpha(#dd0031, 0.1); }
+.chip.fw-storybook { color: #e6336f; background-color: alpha(#ff4785, 0.12); }
+.chip.fw-createreactapp { color: #087ea4; background-color: alpha(#087ea4, 0.12); }
+.chip.fw-webpack { color: #1c78c0; background-color: alpha(#1c78c0, 0.12); }
+.chip.fw-nodejs { color: #3c873a; background-color: alpha(#3c873a, 0.12); }
+.chip.fw-bun { color: #a3640a; background-color: alpha(#e5a50a, 0.14); }
+.chip.fw-python, .chip.fw-httpserver { color: #2f6ca3; background-color: alpha(#3776ab, 0.12); }
+.chip.fw-uvicorn, .chip.fw-fastapi { color: #058d80; background-color: alpha(#05998b, 0.12); }
+.chip.fw-gunicorn, .chip.fw-django { color: #0c6b45; background-color: alpha(#0c6b45, 0.12); }
+.chip.fw-flask { color: #4a4a4a; background-color: alpha(#4a4a4a, 0.1); }
+.chip.fw-jupyterlab, .chip.fw-jupyter { color: #d35f1c; background-color: alpha(#f37626, 0.13); }
+.chip.fw-streamlit { color: #d42a35; background-color: alpha(#ff4b4b, 0.12); }
+.chip.fw-rails, .chip.fw-puma { color: #c00; background-color: alpha(#c00, 0.1); }
+.chip.fw-docker { color: @pg_docker; background-color: alpha(@pg_docker, 0.12); }
+.chip.fw-podman { color: @pg_podman; background-color: alpha(@pg_podman, 0.12); }
+.chip.fw-postgresql { color: #336791; background-color: alpha(#336791, 0.13); }
+.chip.fw-redis { color: #c9302c; background-color: alpha(#dc382d, 0.12); }
+.chip.fw-mongodb { color: #138a45; background-color: alpha(#13aa52, 0.12); }
+
+/* ---- Section headers ------------------------------------------------------ */
+
+.section-header {
+  margin: 18px 6px 8px 6px;
+}
+
+.section-header .section-title {
+  font-weight: 800;
+  font-size: 1.02em;
+}
+
+.section-header .section-subtitle {
+  font-size: 0.84em;
+}
+
+.section-header .section-icon {
+  color: alpha(@window_fg_color, 0.6);
+}
+
+.section-header .section-icon.git {
+  color: @accent_color;
+}
+
+.port-list {
+  margin-bottom: 6px;
+}
+
+/* ---- Desktop widget --------------------------------------------------------- */
+
+window.portglance-widget,
+window.portglance-widget > contents {
+  background: none;
+  box-shadow: none;
+}
+
+.widget-card {
+  margin: 10px;
+  padding: 8px 6px 6px 6px;
+  border-radius: 16px;
+  background-color: alpha(@window_bg_color, 0.94);
+  border: 1px solid alpha(@window_fg_color, 0.08);
+  box-shadow: 0 3px 9px 1px alpha(black, 0.18), 0 0 0 1px alpha(black, 0.05);
+}
+
+.widget-card .widget-title {
+  font-weight: 800;
+  font-size: 0.9em;
+}
+
+.widget-card .widget-count {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 99px;
+  font-size: 0.75em;
+  font-weight: 800;
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
+}
+
+.widget-card .widget-button {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+}
+
+.widget-list {
+  background: none;
+}
+
+.widget-list > row {
+  border-radius: 9px;
+  padding: 3px 4px 3px 6px;
+}
+
+.widget-list .widget-port {
+  font-family: monospace;
+  font-weight: 800;
+  color: @accent_color;
+}
+
+.widget-list .widget-port.container {
+  color: @pg_docker;
+}
+
+.widget-list .widget-name {
+  font-weight: 600;
+  font-size: 0.92em;
+}
+
+.widget-list .widget-project {
+  font-size: 0.82em;
+}
+
+.widget-list .widget-stop {
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0;
+  opacity: 0;
+}
+
+.widget-list > row:hover .widget-stop,
+.widget-list .widget-stop:focus {
+  opacity: 1;
+}
+
+.widget-list .widget-stop:hover {
+  color: @destructive_color;
+}
+
+.widget-empty {
+  padding: 10px 8px 12px 8px;
+  font-size: 0.9em;
+}
+
+/* ---- Misc ------------------------------------------------------------------- */
+
+.mono {
+  font-family: monospace;
+}
+
+.empty-hint {
+  font-size: 0.9em;
+}

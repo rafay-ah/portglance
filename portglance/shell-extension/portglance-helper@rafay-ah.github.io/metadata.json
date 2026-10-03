@@ -1,0 +1,8 @@
+{
+  "uuid": "portglance-helper@rafay-ah.github.io",
+  "name": "PortGlance Helper",
+  "description": "Lets PortGlance keep its desktop widget above other windows and on every workspace. Wayland does not allow apps to do this themselves.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "url": "https://github.com/rafay-ah/portglance",
+  "version": 1
+}

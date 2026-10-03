@@ -91,6 +91,9 @@ _RULES: list[tuple[str, str]] = [
 
 _COMPILED = [(label, re.compile(pattern)) for label, pattern in _RULES]
 
+#: Labels that only name the runtime; the process name already says as much.
+GENERIC_FRAMEWORKS = frozenset({"Node.js", "Python", "Ruby", "Java", "Go", "Docker", "Podman"})
+
 #: Services that speak something other than HTTP: no "open in browser" for these.
 NON_HTTP_FRAMEWORKS = frozenset(
     {

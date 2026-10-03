@@ -56,7 +56,7 @@ def describe_addresses(addresses: list[str]) -> str:
 def shorten_path(path: str | None, home: str | None = None) -> str:
     if not path:
         return ""
-    home = home or os.path.expanduser("~")
+    home = home or os.environ.get("PORTGLANCE_DISPLAY_HOME") or os.path.expanduser("~")
     if path == home:
         return "~"
     if path.startswith(home.rstrip("/") + "/"):

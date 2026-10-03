@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#62a0ea"/>
+      <stop offset="1" stop-color="#1c71d8"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#deddda"/>
+    </linearGradient>
+    <linearGradient id="cavity" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e2a3c"/>
+      <stop offset="1" stop-color="#2f3f57"/>
+    </linearGradient>
+    <linearGradient id="pin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f9e27d"/>
+      <stop offset="1" stop-color="#e5a50a"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="16" width="112" height="104" rx="26" fill="#1a5fb4"/>
+  <rect x="8" y="8" width="112" height="106" rx="26" fill="url(#base)"/>
+  <path d="M30 36h68a9 9 0 0 1 9 9v31a9 9 0 0 1-9 9H84v7a7 7 0 0 1-7 7H51a7 7 0 0 1-7-7v-7H30a9 9 0 0 1-9-9V45a9 9 0 0 1 9-9z" fill="#164e96" opacity="0.35" transform="translate(0 3)"/>
+  <path d="M30 36h68a9 9 0 0 1 9 9v31a9 9 0 0 1-9 9H84v7a7 7 0 0 1-7 7H51a7 7 0 0 1-7-7v-7H30a9 9 0 0 1-9-9V45a9 9 0 0 1 9-9z" fill="url(#face)"/>
+  <path d="M34 43h60a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4H77v8a3 3 0 0 1-3 3H54a3 3 0 0 1-3-3v-8H34a4 4 0 0 1-4-4V47a4 4 0 0 1 4-4z" fill="url(#cavity)"/>
+  <g fill="url(#pin)">
+    <rect x="38.5" y="45" width="4" height="13" rx="1"/>
+    <rect x="45.5" y="45" width="4" height="13" rx="1"/>
+    <rect x="52.5" y="45" width="4" height="13" rx="1"/>
+    <rect x="59.5" y="45" width="4" height="13" rx="1"/>
+    <rect x="66.5" y="45" width="4" height="13" rx="1"/>
+    <rect x="73.5" y="45" width="4" height="13" rx="1"/>
+    <rect x="80.5" y="45" width="4" height="13" rx="1"/>
+    <rect x="87.5" y="45" width="4" height="13" rx="1"/>
+  </g>
+  <circle cx="101" cy="27" r="14" fill="#ffffff"/>
+  <circle cx="101" cy="27" r="9.5" fill="#2ec27e"/>
+  <circle cx="98" cy="24" r="3" fill="#ffffff" opacity="0.45"/>
+</svg>

@@ -305,6 +305,7 @@ class DockerSource:
         max_age: float = 60.0,
         rediscover_every: float = 30.0,
         proc_root: str = "/proc",
+        memory_reader: Callable[[int], int | None] | None = None,
     ) -> None:
         self._client = client
         self._discover = discover
@@ -312,6 +313,7 @@ class DockerSource:
         self.max_age = max_age
         self.rediscover_every = rediscover_every
         self.proc_root = proc_root
+        self._memory = memory_reader or (lambda pid: cgroup_memory(pid, proc_root))
         self._lock = threading.Lock()
         self._containers: list[ContainerInfo] = []
         self._inspected: dict[str, tuple[float | None, int | None]] = {}
@@ -365,7 +367,7 @@ class DockerSource:
             self._reload(now)
         for container in self._containers:
             if container.pid:
-                container.memory = cgroup_memory(container.pid, self.proc_root)
+                container.memory = self._memory(container.pid)
         return self._status, list(self._containers)
 
     def _reload(self, now: float) -> None:

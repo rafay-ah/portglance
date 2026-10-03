@@ -1,0 +1,32 @@
+/* Overrides loaded on top of style.css while the dark style is active. */
+
+@define-color pg_docker #6ea8ff;
+@define-color pg_podman #d48fe6;
+
+.chip.fw-vite { color: #b0a2ff; background-color: alpha(#8c78ff, 0.2); }
+.chip.fw-nextjs { color: #f0f0f0; background-color: alpha(#ffffff, 0.12); }
+.chip.fw-nuxt { color: #4fe0a8; background-color: alpha(#00dc82, 0.16); }
+.chip.fw-astro { color: #ff9a5c; background-color: alpha(#ff5d01, 0.2); }
+.chip.fw-sveltekit { color: #ff8a5c; background-color: alpha(#ff3e00, 0.2); }
+.chip.fw-angular { color: #ff6b87; background-color: alpha(#dd0031, 0.24); }
+.chip.fw-storybook { color: #ff8ab2; background-color: alpha(#ff4785, 0.2); }
+.chip.fw-createreactapp { color: #6ad7f2; background-color: alpha(#61dafb, 0.16); }
+.chip.fw-webpack { color: #8ed6fb; background-color: alpha(#8ed6fb, 0.16); }
+.chip.fw-nodejs { color: #8fd18c; background-color: alpha(#5fa04e, 0.22); }
+.chip.fw-bun { color: #f6d27a; background-color: alpha(#f6d27a, 0.16); }
+.chip.fw-python, .chip.fw-httpserver { color: #8ab9ea; background-color: alpha(#4b8bbe, 0.24); }
+.chip.fw-uvicorn, .chip.fw-fastapi { color: #5fe0d2; background-color: alpha(#05998b, 0.26); }
+.chip.fw-gunicorn, .chip.fw-django { color: #6fd6a3; background-color: alpha(#44b78b, 0.22); }
+.chip.fw-flask { color: #e0e0e0; background-color: alpha(#ffffff, 0.12); }
+.chip.fw-jupyterlab, .chip.fw-jupyter { color: #ffad73; background-color: alpha(#f37626, 0.22); }
+.chip.fw-streamlit { color: #ff8a8f; background-color: alpha(#ff4b4b, 0.22); }
+.chip.fw-rails, .chip.fw-puma { color: #ff7b7b; background-color: alpha(#ff4d4d, 0.2); }
+.chip.fw-postgresql { color: #8fb8e8; background-color: alpha(#336791, 0.4); }
+.chip.fw-redis { color: #ff8478; background-color: alpha(#dc382d, 0.24); }
+.chip.fw-mongodb { color: #6fe0a0; background-color: alpha(#13aa52, 0.22); }
+
+.widget-card {
+  background-color: alpha(@window_bg_color, 0.9);
+  border-color: alpha(white, 0.08);
+  box-shadow: 0 3px 9px 1px alpha(black, 0.45), 0 0 0 1px alpha(black, 0.3);
+}

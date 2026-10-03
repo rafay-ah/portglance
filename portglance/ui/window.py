@@ -76,7 +76,6 @@ class PortListView(Adw.Bin):
                 row = self._rows.get(entry.key)
                 if row is None:
                     row = self._rows[entry.key] = PortRow(entry)
-                    row.connect("activate", lambda r: r.activate_default())
                 else:
                     row.update(entry, now)
         for key in set(self._rows) - live_keys:
@@ -117,6 +116,7 @@ class PortListView(Adw.Bin):
                     selection_mode=Gtk.SelectionMode.NONE,
                     css_classes=["boxed-list", "port-list"],
                 )
+                listbox.connect("row-activated", _on_row_activated)
             items: list[tuple[int, int, Gtk.ListBoxRow]] = []
             for port in section.free_ports:
                 row = self._free_rows.get(port)
@@ -273,6 +273,11 @@ class MainWindow(Adw.ApplicationWindow):
 
     def _on_page_action(self, action: Gio.SimpleAction, value: GLib.Variant) -> None:
         self.view_stack.set_visible_child_name(value.get_string())
+
+
+def _on_row_activated(_listbox: Gtk.ListBox, row: Gtk.ListBoxRow) -> None:
+    if isinstance(row, PortRow):
+        row.activate_default()
 
 
 def _primary_menu() -> Gio.Menu:

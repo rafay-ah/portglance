@@ -289,11 +289,39 @@ class PortGlanceApplication(Adw.Application):
         if toast and self._parent() is not None:
             self.window.toast(title if not body else f"{title}. {body}")
             return
-        notification = Gio.Notification.new(title)
-        if body:
-            notification.set_body(body)
-        notification.set_icon(Gio.ThemedIcon.new(APP_ID))
-        self.send_notification(None, notification)
+        if not self._freedesktop_notify(title, body):
+            notification = Gio.Notification.new(title)
+            if body:
+                notification.set_body(body)
+            notification.set_icon(Gio.ThemedIcon.new(APP_ID))
+            self.send_notification(None, notification)
+
+    def _freedesktop_notify(self, title: str, body: str) -> bool:
+        """Use org.freedesktop.Notifications directly.
+
+        Unlike GApplication notifications, this also works when no desktop
+        file is installed for the app id, as with the AppImage.
+        """
+        icon = ICONS_DIR / "hicolor" / "scalable" / "apps" / f"{APP_ID}.svg"
+        hints = {"desktop-entry": GLib.Variant("s", APP_ID)}
+        try:
+            bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+            bus.call_sync(
+                "org.freedesktop.Notifications",
+                "/org/freedesktop/Notifications",
+                "org.freedesktop.Notifications",
+                "Notify",
+                GLib.Variant(
+                    "(susssasa{sv}i)", (APP_NAME, 0, str(icon), title, body, [], hints, -1)
+                ),
+                GLib.VariantType.new("(u)"),
+                Gio.DBusCallFlags.NONE,
+                1000,
+                None,
+            )
+        except GLib.Error:
+            return False
+        return True
 
     def open_url(self, url: str, token: str | None = None) -> None:
         self._launch_uri(url, token, "Could not open the browser")

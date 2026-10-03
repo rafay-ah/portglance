@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import signal
 import threading
 
@@ -38,6 +39,7 @@ class PortGlanceApplication(Adw.Application):
         self._stopping: dict[str, PortEntry] = {}
         self._dark_css: Gtk.CssProvider | None = None
         self._started = False
+        self._indicator_checked = False
         GLib.set_application_name(APP_NAME)
 
     # -- lifecycle ---------------------------------------------------------------------
@@ -72,6 +74,8 @@ class PortGlanceApplication(Adw.Application):
         for signum in (signal.SIGINT, signal.SIGTERM):
             GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, signum, self._on_unix_signal)
         self.monitor.start()
+        # Give the panel a moment to pick up the indicator before suggesting a fix.
+        GLib.timeout_add_seconds(5, self._check_indicator)
         self.hold()  # keep running in the background with only the indicator
 
     def do_shutdown(self) -> None:
@@ -120,8 +124,7 @@ class PortGlanceApplication(Adw.Application):
             self.window.connect("notify::visible", self._on_visibility_changed)
             if self.snapshot is not None:
                 self.window.update(self.snapshot)
-            if self.demo is not None:
-                self.window.show_banner(self.demo.banner)
+            self._update_banner()
         if token:
             self.window.set_startup_id(token)
         self.window.present()
@@ -185,6 +188,31 @@ class PortGlanceApplication(Adw.Application):
 
     def on_indicator_changed(self, _registered: bool) -> None:
         """Called when the panel indicator appears or disappears."""
+        self._update_banner()
+
+    def _check_indicator(self) -> bool:
+        self._indicator_checked = True
+        self._update_banner()
+        return GLib.SOURCE_REMOVE
+
+    def _update_banner(self) -> None:
+        if self.window is None:
+            return
+        if self.demo is not None:
+            self.window.show_banner(self.demo.banner)
+        elif self._indicator_checked and not (self.indicator and self.indicator.registered):
+            if _desktop_is_gnome():
+                self.window.show_banner(
+                    "The top-bar icon needs the AppIndicator extension",
+                    "Get It",
+                    APPINDICATOR_URL,
+                )
+            else:
+                self.window.show_banner(
+                    "Your panel can’t show the PortGlance icon", "Learn More", HELP_URL
+                )
+        else:
+            self.window.show_banner(None)
 
     # -- snapshot --------------------------------------------------------------------------
 
@@ -537,6 +565,15 @@ class PortGlanceApplication(Adw.Application):
             )
         else:
             Gtk.StyleContext.remove_provider_for_display(display, self._dark_css)
+
+
+APPINDICATOR_URL = "https://extensions.gnome.org/extension/615/appindicator-support/"
+HELP_URL = f"{WEBSITE}#troubleshooting"
+
+
+def _desktop_is_gnome() -> bool:
+    desktops = os.environ.get("XDG_CURRENT_DESKTOP", "").lower().split(":")
+    return "gnome" in desktops
 
 
 def _stop_heading(entry: PortEntry, force: bool) -> str:

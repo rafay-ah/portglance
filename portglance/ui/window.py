@@ -201,6 +201,8 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar.add_top_bar(self.search_bar)
 
         self.banner = Adw.Banner()
+        self._banner_url: str | None = None
+        self.banner.connect("button-clicked", self._on_banner_button)
         toolbar.add_top_bar(self.banner)
 
         self.dev_view = PortListView(self, include_system=False)
@@ -252,10 +254,18 @@ class MainWindow(Adw.ApplicationWindow):
     def row_for(self, key: str) -> list[PortRow]:
         return [r for r in (self.dev_view.row_for(key), self.all_view.row_for(key)) if r]
 
-    def show_banner(self, title: str | None) -> None:
+    def show_banner(
+        self, title: str | None, button: str | None = None, url: str | None = None
+    ) -> None:
         if title:
             self.banner.set_title(title)
+            self.banner.set_button_label(button)
+            self._banner_url = url
         self.banner.set_revealed(bool(title))
+
+    def _on_banner_button(self, _banner: Adw.Banner) -> None:
+        if self._banner_url:
+            self.app.open_url(self._banner_url)
 
     # -- handlers --------------------------------------------------------------------
 

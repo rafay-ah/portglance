@@ -100,7 +100,9 @@ excluded() {
     grep -qx -- "$1" < <(sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$EXCLUDES" | grep -v '^$')
 }
 resolve() {
-    ldconfig -p | awk -v name="$1" '$1 == name && /x86-64|64bit/ { print $NF; exit }'
+    # Not a pipeline: awk stops reading early, and pipefail would turn the
+    # resulting SIGPIPE in ldconfig into a failure on large caches.
+    awk -v name="$1" '$1 == name && /x86-64|64bit/ { print $NF; exit }' < <(ldconfig -p)
 }
 
 targets=("$APPDIR/usr/bin/python$PYVER")

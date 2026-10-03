@@ -318,7 +318,7 @@ class PortGlanceApplication(Adw.Application):
             self.window.toast(title if not body else f"{title}. {body}")
             return
         app_id = self.get_application_id() or APP_ID
-        if Gio.DesktopAppInfo.new(f"{app_id}.desktop") is not None:
+        if _desktop_file_installed(app_id):
             notification = Gio.Notification.new(title)
             if body:
                 notification.set_body(body)
@@ -329,11 +329,7 @@ class PortGlanceApplication(Adw.Application):
             self._freedesktop_notify(app_id, title, body)
 
     def _freedesktop_notify(self, app_id: str, title: str, body: str) -> None:
-        """Notify through org.freedesktop.Notifications.
-
-        GNOME drops GApplication notifications from apps without an installed
-        desktop file, which is how the AppImage and demo mode run.
-        """
+        """Notify through org.freedesktop.Notifications (see _desktop_file_installed)."""
         icon = (ICONS_DIR / "hicolor" / "scalable" / "apps" / f"{APP_ID}.svg").as_uri()
         hints = {"desktop-entry": GLib.Variant("s", app_id)}
         params = GLib.Variant(
@@ -569,6 +565,21 @@ class PortGlanceApplication(Adw.Application):
 
 APPINDICATOR_URL = "https://extensions.gnome.org/extension/615/appindicator-support/"
 HELP_URL = f"{WEBSITE}#troubleshooting"
+
+
+def _desktop_file_installed(app_id: str) -> bool:
+    """Whether the desktop can find ``<app_id>.desktop``.
+
+    GNOME drops GApplication notifications from apps without one, which is how
+    demo mode and the AppImage run: the AppImage's own desktop file is only
+    visible from inside the image.
+    """
+    if os.environ.get("APPIMAGE"):
+        return False
+    try:
+        return Gio.DesktopAppInfo.new(f"{app_id}.desktop") is not None
+    except TypeError:  # PyGObject raises when there is no such desktop file
+        return False
 
 
 def _desktop_is_gnome() -> bool:

@@ -1,0 +1,86 @@
+name: Release
+
+# Builds the .deb and the AppImage. On a published release the files are
+# attached to it; a manual run keeps them as workflow artifacts only.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build .deb and AppImage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            python3-gi python3-pytest gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-2.0 \
+            adwaita-icon-theme librsvg2-common libgdk-pixbuf2.0-bin dconf-gsettings-backend \
+            libglib2.0-bin shared-mime-info desktop-file-utils appstream lintian \
+            xvfb xauth dbus-x11 curl file
+
+      - name: Check the release tag matches the version
+        if: github.event_name == 'release'
+        run: |
+          version="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' portglance/__init__.py)"
+          tag="${{ github.event.release.tag_name }}"
+          if [ "${tag#v}" != "$version" ]; then
+            echo "::error::Release tag $tag does not match __version__ $version"
+            exit 1
+          fi
+
+      - name: Test
+        run: dbus-run-session -- xvfb-run -a /usr/bin/python3 -m pytest
+
+      - name: Validate desktop entry and AppStream metadata
+        run: |
+          desktop-file-validate data/io.github.rafay_ah.PortGlance.desktop
+          appstreamcli validate --no-net data/io.github.rafay_ah.PortGlance.metainfo.xml
+
+      - name: Build the .deb
+        run: |
+          bash packaging/deb/build-deb.sh
+          lintian --fail-on error dist/*.deb
+
+      - name: Build the AppImage
+        run: bash packaging/appimage/build-appimage.sh
+
+      - name: Smoke-test the AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          appimage="$(ls dist/*.AppImage)"
+          "$appimage" --version
+          "$appimage" list --all
+          dbus-run-session -- xvfb-run -a "$appimage" doctor
+          # Start the app in demo mode for a few seconds and make sure it
+          # neither crashes nor logs a Python traceback.
+          set +e
+          timeout 15 dbus-run-session -- xvfb-run -a "$appimage" --demo > demo.log 2>&1
+          status=$?
+          set -e
+          cat demo.log
+          [ "$status" -eq 124 ] || { echo "::error::demo exited with $status"; exit 1; }
+          ! grep -q "Traceback" demo.log
+
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: portglance-packages
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/* --clobber

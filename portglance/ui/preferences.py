@@ -113,7 +113,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             "notify::active", lambda r, _p: settings.set("docker_enabled", r.get_active())
         )
         docker.add(docker_row)
-        self.docker_status = Adw.ActionRow(title="Status")
+        self.docker_status = Adw.ActionRow(title="Status", use_markup=False)
         self.docker_status_icon = Gtk.Image(valign=Gtk.Align.CENTER)
         self.docker_status.add_prefix(self.docker_status_icon)
         docker.add(self.docker_status)
@@ -218,13 +218,17 @@ class PreferencesDialog(Adw.PreferencesDialog):
         try:
             autostart.set_enabled(row.get_active())
         except OSError as exc:
-            self.add_toast(Adw.Toast(title=f"Could not change autostart: {exc.strerror}"))
+            self.add_toast(
+                Adw.Toast(title=f"Could not change autostart: {exc.strerror}", use_markup=False)
+            )
 
     def _on_install_helper(self, _button: Gtk.Button) -> None:
         try:
             pinning.install_helper()
         except OSError as exc:
-            self.add_toast(Adw.Toast(title=f"Could not install the helper: {exc.strerror}"))
+            self.add_toast(
+                Adw.Toast(title=f"Could not install the helper: {exc.strerror}", use_markup=False)
+            )
         self._refresh_helper()
 
     def _on_setting_changed(self, key: str, value) -> None:

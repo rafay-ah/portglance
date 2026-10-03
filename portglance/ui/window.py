@@ -245,7 +245,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.all_page.set_badge_number(len(snapshot.entries))
 
     def toast(self, title: str, *, button: str | None = None, action=None, timeout=4) -> None:
-        toast = Adw.Toast(title=title, timeout=timeout)
+        toast = Adw.Toast(title=title, timeout=timeout, use_markup=False)
         if button and action:
             toast.set_button_label(button)
             toast.set_action_name(action[0])

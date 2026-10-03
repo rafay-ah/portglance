@@ -25,6 +25,7 @@ from .core.formatting import (
     shorten_path,
     user_name,
 )
+from .core.grouping import display_label
 from .core.model import PortEntry
 from .core.scanner import Scanner, Snapshot
 
@@ -262,12 +263,15 @@ def cmd_list(options: argparse.Namespace) -> int:
 def _describe(entry: PortEntry) -> str:
     if entry.container is not None:
         return f"container {entry.container.name} ({entry.container.image})"
-    parts = [entry.name]
+    label = display_label(entry)
+    facts = []
+    if entry.process is not None and entry.process.name != label:
+        facts.append(entry.process.name)
     if entry.pid:
-        parts.append(f"PID {entry.pid}")
+        facts.append(f"PID {entry.pid}")
     if entry.project is not None:
-        parts.append(entry.project.name)
-    return f"{parts[0]} ({', '.join(parts[1:])})" if len(parts) > 1 else parts[0]
+        facts.append(entry.project.name)
+    return f"{label} ({', '.join(facts)})" if facts else label
 
 
 def _confirm(question: str) -> bool:
